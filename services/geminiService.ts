@@ -236,3 +236,16 @@ export const generateFeaturePrompt = async (plan: AppPlan, feature: Feature): Pr
     };
     return generateAndParseJson<Prompt>(prompt, schema);
 };
+
+export const generateInspirationInput = async (): Promise<{ idea: string; category: string }> => {
+    const prompt = `Generate a random, creative, and innovative app idea. Provide a short description of the idea and a 1-2 word category it belongs to.`;
+    const schema = {
+        type: Type.OBJECT,
+        properties: {
+            idea: { type: Type.STRING, description: "A short description of the app idea (1 sentence)." },
+            category: { type: Type.STRING, description: "A 1-2 word category." },
+        },
+        required: ["idea", "category"],
+    };
+    return generateAndParseJson<{ idea: string; category: string }>(prompt, schema);
+};

@@ -3,7 +3,7 @@ import { AppPlan, AppPhase, Persona, TechStack, MvpStep, Feature, PricingTier } 
 import Sidebar from './components/Sidebar';
 import Canvas from './components/Canvas';
 import Tutorial from './components/Tutorial';
-import { generateInitialIdeas } from './services/geminiService';
+import { generateInitialIdeas, generateInspirationInput } from './services/geminiService';
 
 declare global {
     interface Window {
@@ -18,6 +18,7 @@ const App: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [showTutorial, setShowTutorial] = useState(true);
     const [initialIdeaCategory, setInitialIdeaCategory] = useState('');
+    const [appIdea, setAppIdea] = useState('');
     const [generatedIdeas, setGeneratedIdeas] = useState<string[]>([]);
     const [error, setError] = useState<string | null>(null);
     const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
@@ -47,6 +48,7 @@ const App: React.FC = () => {
         setCurrentPhase(AppPhase.FOUNDATIONS);
         setGeneratedIdeas([]);
         setInitialIdeaCategory('');
+        setAppIdea('');
     };
 
     const handleGenerateIdeas = async () => {
@@ -66,6 +68,21 @@ const App: React.FC = () => {
             setLoading(false);
         }
     };
+
+    const handleInspireMe = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const { idea, category } = await generateInspirationInput();
+            setAppIdea(idea);
+            setInitialIdeaCategory(category);
+        } catch (e) {
+            setError('Failed to generate inspiration. Please try again.');
+            console.error(e);
+        } finally {
+            setLoading(false);
+        }
+    };
     
     const handleCloseTutorial = () => {
         setShowTutorial(false);
@@ -77,6 +94,7 @@ const App: React.FC = () => {
         setCurrentPhase(AppPhase.SETUP);
         setGeneratedIdeas([]);
         setInitialIdeaCategory('');
+        setAppIdea('');
     };
 
     const handleExportPDF = () => {
@@ -227,8 +245,10 @@ const App: React.FC = () => {
                             <div className="w-full">
                                 <input
                                     type="text"
+                                    value={appIdea}
+                                    onChange={(e) => setAppIdea(e.target.value)}
                                     placeholder="Enter your app idea to start..."
-                                    onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).value && handleStartNewApp((e.target as HTMLInputElement).value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && appIdea && handleStartNewApp(appIdea)}
                                     className="w-full p-3 bg-gray-700 rounded-md border-2 border-transparent focus:border-indigo-500 focus:outline-none focus:ring-0 transition"
                                 />
                                 <p className="text-gray-500 text-sm mt-2">Press Enter to begin.</p>
@@ -254,6 +274,23 @@ const App: React.FC = () => {
                                     {loading ? 'Generating...' : 'Generate Ideas'}
                                 </button>
                             </div>
+                            
+                            <div className="mt-6 pt-6 border-t border-gray-700 w-full">
+                                <button
+                                    onClick={handleInspireMe}
+                                    disabled={loading}
+                                    className="w-full group relative inline-flex items-center justify-center px-8 py-3 text-base font-medium text-white transition-all duration-200 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg hover:from-purple-500 hover:to-indigo-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-indigo-500/30"
+                                >
+                                    {loading ? (
+                                         <i className="fas fa-spinner fa-spin mr-2"></i>
+                                    ) : (
+                                         <i className="fas fa-wand-magic-sparkles mr-2 group-hover:animate-pulse text-yellow-300"></i>
+                                    )}
+                                    {loading ? 'Conjuring Idea...' : 'Inspire Me'}
+                                </button>
+                                <p className="mt-2 text-gray-500 text-xs">Fills the fields with a random app idea and category.</p>
+                            </div>
+
                             {error && <p className="text-red-400 mt-4">{error}</p>}
                             {generatedIdeas.length > 0 && (
                                 <div className="mt-6 text-left">

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Card from './Card';
 import Modal from '../Modal';
@@ -90,9 +91,10 @@ const MvpPlanCard: React.FC<MvpPlanCardProps> = ({ plan, updatePlan, loading, se
         <>
             <Card title="MVP Plan" icon="fa-tasks" color="purple" headerActions={headerActions}>
                 <ul className="space-y-3">
-                    {(isEditing ? localMvpPlan : plan.mvpPlan).map((step) => (
+                    {(isEditing ? localMvpPlan : plan.mvpPlan).map((step, index) => (
                         <li key={step.id} className="flex items-center justify-between bg-gray-900/50 p-3 rounded-lg">
                             <div className="flex items-center gap-3 flex-grow mr-2">
+                                <span className="text-gray-500 font-mono text-sm">{index + 1}.</span>
                                 <input
                                     type="checkbox"
                                     checked={step.completed}

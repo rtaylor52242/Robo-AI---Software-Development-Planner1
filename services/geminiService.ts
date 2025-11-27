@@ -1,6 +1,6 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { AppPlan, MarketValidation, Persona, PricingTier, TechStack, Prompt, Feature } from '../types';
+import { AppPlan, MarketValidation, Persona, PricingTier, TechStack, Prompt, Feature, UserProfile } from '../types';
 
 if (!process.env.API_KEY) {
   throw new Error("API_KEY environment variable is not set.");
@@ -33,8 +33,8 @@ const buildContext = (plan: AppPlan): string => {
     - Idea: ${plan.idea}
     - Improvements: ${plan.ideaImprovements.join(', ') || 'None'}
     `;
-    if (plan.persona) {
-        context += `- Persona: ${plan.persona.name}, ${plan.persona.bio}\n`;
+    if (plan.personas && plan.personas.length > 0) {
+        context += `- Target Personas: ${plan.personas.map(p => p.name + ' (' + p.bio + ')').join(', ')}\n`;
     }
     if (plan.techStack) {
         context += `- Tech Stack: Backend: ${plan.techStack.backend}, DB: ${plan.techStack.database}\n`;
@@ -43,7 +43,7 @@ const buildContext = (plan: AppPlan): string => {
 };
 
 export const generateInitialIdeas = async (category: string): Promise<string[]> => {
-    const prompt = `Generate 3 innovative and specific app ideas for the category "${category}". For example, if the category is 'fitness', suggest something like 'A fitness app for new parents that offers 15-minute, baby-friendly workouts'.`;
+    const prompt = `Generate 6 innovative and specific app ideas for the category "${category}". For example, if the category is 'fitness', suggest something like 'A fitness app for new parents that offers 15-minute, baby-friendly workouts'.`;
     const schema = {
         type: Type.OBJECT,
         properties: {
@@ -139,8 +139,13 @@ export const generatePricing = async (plan: AppPlan): Promise<PricingTier[]> => 
     return generateAndParseJson<PricingTier[]>(prompt, schema);
 };
 
-export const generateTechStack = async (plan: AppPlan): Promise<TechStack[]> => {
-    const prompt = `For the app idea "${plan.idea}", recommend 3 different tech stacks. Categorize them (e.g., "Best for simple web apps", "Best for full-stack web apps", "Best for complex mobile apps"). For each stack, specify the backend, database, authentication, payments (suggest Stripe or RevenueCat), and 2-3 relevant services/APIs.`;
+export const generateTechStack = async (plan: AppPlan, userProfile: UserProfile): Promise<TechStack[]> => {
+    const userPrefs = userProfile.techPreferences.length > 0 
+        ? `The user has the following tech stack preferences: ${userProfile.techPreferences.join(', ')}. Please try to incorporate these into the suggestions where appropriate. If a preference is not suitable or additional components are needed, provide a recommended alternative or addition.` 
+        : '';
+
+    const prompt = `For the app idea "${plan.idea}", recommend 3 different tech stacks in order of suitability (1 being best). Categorize them (e.g., "Best for simple web apps", "Best for full-stack web apps", "Best for complex mobile apps"). ${userPrefs} For each stack, specify the backend, database, authentication, payments (suggest Stripe or RevenueCat), and 2-3 relevant services/APIs.`;
+    
     const schema = {
         type: Type.ARRAY,
         items: {
@@ -248,4 +253,29 @@ export const generateInspirationInput = async (): Promise<{ idea: string; catego
         required: ["idea", "category"],
     };
     return generateAndParseJson<{ idea: string; category: string }>(prompt, schema);
+};
+
+export const generateDesignDocument = async (plan: AppPlan): Promise<string> => {
+    const context = buildContext(plan);
+    const prompt = `
+    ${context}
+
+    Create a comprehensive design document and master coding prompt for this app. 
+    This document should be designed to be pasted into an AI coding assistant to build the entire application or significant portions of it.
+    
+    Structure it as follows:
+    1. **Project Overview**: Brief summary of the app and its purpose.
+    2. **Tech Stack**: Detailed list of technologies (Frontend, Backend, DB, Auth, etc.).
+    3. **Architecture**: High-level directory structure and data flow.
+    4. **Step-by-Step Implementation Plan**: Break down the development into logical steps (e.g., Step 1: Setup, Step 2: Auth, etc.). For each step, list the specific files and features to implement.
+    5. **Style Guidelines**: UI/UX principles to follow.
+    
+    The output should be a single coherent markdown string.
+    `;
+    
+    const response = await ai.models.generateContent({
+        model: model,
+        contents: prompt,
+    });
+    return response.text;
 };

@@ -1,10 +1,12 @@
+
 import React from 'react';
-import { AppPlan, AppPhase } from '../types';
+import { AppPlan, AppPhase, UserProfile } from '../types';
 import IdeaCard from './cards/IdeaCard';
 import PersonaCard from './cards/PersonaCard';
 import TechStackCard from './cards/TechStackCard';
 import MvpPlanCard from './cards/MvpPlanCard';
 import FeatureCard from './cards/FeatureCard';
+import UserProfileCard from './cards/UserProfileCard';
 
 interface CanvasProps {
     plan: AppPlan;
@@ -12,6 +14,8 @@ interface CanvasProps {
     setCurrentPhase: (phase: AppPhase) => void;
     loading: boolean;
     setLoading: (loading: boolean) => void;
+    userProfile: UserProfile;
+    setUserProfile: (profile: UserProfile) => void;
 }
 
 const Canvas: React.FC<CanvasProps> = (props) => {
@@ -24,8 +28,24 @@ const Canvas: React.FC<CanvasProps> = (props) => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
                 {/* Column 1 */}
                 <div className="lg:col-span-1 space-y-8">
+                    <UserProfileCard userProfile={props.userProfile} setUserProfile={props.setUserProfile} />
                     <IdeaCard {...props} />
-                    {props.plan.persona && <PersonaCard persona={props.plan.persona} updatePlan={props.updatePlan} />}
+                    {props.plan.personas.map((persona, index) => (
+                        <PersonaCard 
+                            key={index} 
+                            index={index}
+                            persona={persona} 
+                            onUpdate={(updated) => {
+                                const newPersonas = [...props.plan.personas];
+                                newPersonas[index] = updated;
+                                props.updatePlan({ personas: newPersonas });
+                            }}
+                            onDelete={() => {
+                                const newPersonas = props.plan.personas.filter((_, i) => i !== index);
+                                props.updatePlan({ personas: newPersonas });
+                            }}
+                        />
+                    ))}
                 </div>
 
                 {/* Column 2 */}

@@ -1,11 +1,14 @@
+
 import React, { useState, useEffect } from 'react';
 import Card from './Card';
-import { AppPlan, Persona } from '../../types';
+import { Persona } from '../../types';
 
 interface PersonaCardProps {
     persona: Persona;
+    index?: number;
     isPreview?: boolean;
-    updatePlan?: (updates: Partial<AppPlan>) => void;
+    onUpdate?: (persona: Persona) => void;
+    onDelete?: () => void;
 }
 
 const EditInput: React.FC<{ value: string, onChange: (e: React.ChangeEvent<HTMLInputElement>) => void }> = ({ value, onChange }) => (
@@ -16,7 +19,7 @@ const EditArea: React.FC<{ value: string, onChange: (e: React.ChangeEvent<HTMLTe
     <textarea value={value} onChange={onChange} rows={3} className="w-full text-sm p-1 bg-gray-700 rounded-md border-2 border-transparent focus:border-indigo-500 focus:outline-none focus:ring-0 transition" />
 );
 
-const PersonaCard: React.FC<PersonaCardProps> = ({ persona, isPreview = false, updatePlan }) => {
+const PersonaCard: React.FC<PersonaCardProps> = ({ persona, index, isPreview = false, onUpdate, onDelete }) => {
     const [isLocked, setIsLocked] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
     const [localPersona, setLocalPersona] = useState(persona);
@@ -26,8 +29,8 @@ const PersonaCard: React.FC<PersonaCardProps> = ({ persona, isPreview = false, u
     }, [persona]);
     
     const handleSave = () => {
-        if(updatePlan) {
-            updatePlan({ persona: localPersona });
+        if(onUpdate) {
+            onUpdate(localPersona);
         }
         setIsEditing(false);
     };
@@ -62,11 +65,18 @@ const PersonaCard: React.FC<PersonaCardProps> = ({ persona, isPreview = false, u
                     <button onClick={handleCancel} className="text-red-400 hover:text-red-300 transition-colors"><i className="fas fa-times"></i></button>
                 </>
             )}
+             {onDelete && !isPreview && (
+                <button onClick={onDelete} className="text-red-400 hover:text-red-300 transition-colors ml-2" title="Delete Persona">
+                    <i className="fas fa-trash"></i>
+                </button>
+            )}
         </div>
     );
 
+    const title = index !== undefined ? `Customer Persona ${index + 1}` : "Customer Persona";
+
     return (
-        <Card title="Customer Persona" icon="fa-user-circle" color="blue" headerActions={headerActions}>
+        <Card title={title} icon="fa-user-circle" color="blue" headerActions={headerActions}>
             <div className="space-y-3">
                 {isEditing ? (
                     <EditInput value={localPersona.name} onChange={(e) => handleChange('name', e.target.value)} />

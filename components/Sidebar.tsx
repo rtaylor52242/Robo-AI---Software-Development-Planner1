@@ -1,12 +1,14 @@
+
 import React from 'react';
 import { AppPlan, AppPhase } from '../types';
 
 interface SidebarProps {
     currentPhase: AppPhase;
+    setCurrentPhase: (phase: AppPhase) => void;
     plan: AppPlan | null;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ currentPhase, plan }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentPhase, setCurrentPhase, plan }) => {
     const phases = Object.values(AppPhase);
     const currentPhaseIndex = phases.indexOf(currentPhase);
 
@@ -14,7 +16,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPhase, plan }) => {
         if (!plan) return 'locked';
         if (index < currentPhaseIndex) return 'completed';
         if (index === currentPhaseIndex) return 'active';
-        return 'locked';
+        return 'unlocked'; // Allow clicking if we've passed it or it's accessible
     };
 
     const phaseIcons = {
@@ -31,6 +33,13 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPhase, plan }) => {
         [AppPhase.LAUNCH]: 'Prepare for deployment and market launch.'
     }
 
+    const handlePhaseClick = (phase: AppPhase, index: number) => {
+        if (!plan) return;
+        // Logic: Can click if it's the current, a previous, or the immediate next (if we want to allow skipping, but typically only if visited)
+        // For backtracking: always allow if status is not 'locked'
+        setCurrentPhase(phase);
+    };
+
     return (
         <aside className="w-16 md:w-72 bg-gray-900 border-r border-gray-700 p-4 md:p-6 flex flex-col justify-between transition-all duration-300">
             <div>
@@ -44,13 +53,18 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPhase, plan }) => {
                     <ul>
                         {phases.map((phase, index) => {
                             const status = getPhaseStatus(phase, index);
+                            const isClickable = status !== 'locked';
+                            
                             return (
                                 <li key={phase} className="mb-6 relative">
-                                    <div className="flex items-center gap-4">
-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2
+                                    <div 
+                                        onClick={() => isClickable && handlePhaseClick(phase, index)}
+                                        className={`flex items-center gap-4 ${isClickable ? 'cursor-pointer hover:bg-gray-800 rounded-lg p-2 -ml-2 transition-colors' : 'opacity-50'}`}
+                                    >
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 flex-shrink-0
                                             ${status === 'completed' ? 'bg-green-500 border-green-400' : ''}
                                             ${status === 'active' ? 'bg-indigo-600 border-indigo-400 animate-pulse' : ''}
-                                            ${status === 'locked' ? 'bg-gray-700 border-gray-600' : ''}
+                                            ${status === 'unlocked' || status === 'locked' ? 'bg-gray-700 border-gray-600' : ''}
                                         `}>
                                             <i className={`fas ${phaseIcons[phase]} text-lg ${status === 'locked' ? 'text-gray-500' : 'text-white'}`}></i>
                                         </div>

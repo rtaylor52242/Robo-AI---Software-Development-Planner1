@@ -1,5 +1,6 @@
+
 import React, { useState, useCallback, useEffect } from 'react';
-import { AppPlan, AppPhase, Persona, TechStack, MvpStep, Feature, PricingTier } from './types';
+import { AppPlan, AppPhase, Persona, TechStack, MvpStep, Feature, PricingTier, UserProfile } from './types';
 import Sidebar from './components/Sidebar';
 import Canvas from './components/Canvas';
 import Tutorial from './components/Tutorial';
@@ -22,6 +23,16 @@ const App: React.FC = () => {
     const [generatedIdeas, setGeneratedIdeas] = useState<string[]>([]);
     const [error, setError] = useState<string | null>(null);
     const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
+    
+    // User Profile State
+    const [userProfile, setUserProfile] = useState<UserProfile>({
+        name: '',
+        phone: '',
+        address: '',
+        bio: '',
+        website: '',
+        techPreferences: []
+    });
 
     const updatePlan = useCallback((updates: Partial<AppPlan>) => {
         setPlan(prev => prev ? { ...prev, ...updates } : null);
@@ -39,7 +50,7 @@ const App: React.FC = () => {
             idea: idea,
             ideaImprovements: [],
             marketValidation: null,
-            persona: null,
+            personas: [],
             pricing: [],
             techStack: null,
             mvpPlan: [],
@@ -97,6 +108,10 @@ const App: React.FC = () => {
         setAppIdea('');
     };
 
+    const getSafeFilename = (name: string) => {
+        return (name || 'app_plan').replace(/[^a-z0-9]/gi, '_').substring(0, 25);
+    };
+
     const handleExportPDF = () => {
         setIsExportMenuOpen(false);
         const canvasElement = document.querySelector('main');
@@ -127,7 +142,7 @@ const App: React.FC = () => {
                 });
     
                 pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
-                pdf.save(`${plan?.idea.replace(/ /g, '_') || 'app_plan'}.pdf`);
+                pdf.save(`${getSafeFilename(plan?.idea || '')}.pdf`);
             });
         }, 100);
     };
@@ -155,13 +170,15 @@ const App: React.FC = () => {
             );
         }
         
-        if (plan.persona) {
-            html += section(`Customer Persona: ${plan.persona.name}`,
-                 `<p><b>Bio:</b> ${plan.persona.bio}</p>` +
-                 `<p><b>Demographics:</b> ${plan.persona.demographics}</p>` +
-                 `<b>Goals:</b>${list(plan.persona.goals)}` +
-                 `<b>Pain Points:</b>${list(plan.persona.painPoints)}`
-            );
+        if (plan.personas && plan.personas.length > 0) {
+            plan.personas.forEach((p, i) => {
+                html += section(`Customer Persona ${i + 1}: ${p.name}`,
+                     `<p><b>Bio:</b> ${p.bio}</p>` +
+                     `<p><b>Demographics:</b> ${p.demographics}</p>` +
+                     `<b>Goals:</b>${list(p.goals)}` +
+                     `<b>Pain Points:</b>${list(p.painPoints)}`
+                );
+            });
         }
 
         if (plan.techStack) {
@@ -176,7 +193,7 @@ const App: React.FC = () => {
         }
 
         if (plan.mvpPlan.length > 0) {
-            html += section('MVP Plan', list(plan.mvpPlan.map(step => `${step.title} (${step.completed ? 'Completed' : 'Pending'})`)));
+            html += section('MVP Plan', list(plan.mvpPlan.map((step, idx) => `${idx + 1}. ${step.title} (${step.completed ? 'Completed' : 'Pending'})`)));
         }
 
         if (plan.features.length > 0) {
@@ -200,7 +217,7 @@ const App: React.FC = () => {
         const fileDownload = document.createElement("a");
         document.body.appendChild(fileDownload);
         fileDownload.href = source;
-        fileDownload.download = `${plan?.idea.replace(/ /g, '_') || 'app_plan'}.doc`;
+        fileDownload.download = `${getSafeFilename(plan?.idea || '')}.doc`;
         fileDownload.click();
         document.body.removeChild(fileDownload);
     };
@@ -208,7 +225,15 @@ const App: React.FC = () => {
     return (
         <div className="flex h-screen bg-gray-900 text-gray-100">
             {showTutorial && <Tutorial onClose={handleCloseTutorial} />}
-            <Sidebar currentPhase={currentPhase} plan={plan} />
+            {loading && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center backdrop-blur-sm">
+                    <div className="flex flex-col items-center gap-4">
+                        <i className="fas fa-spinner fa-spin text-5xl text-indigo-500"></i>
+                        <span className="text-xl font-bold animate-pulse">Thinking...</span>
+                    </div>
+                </div>
+            )}
+            <Sidebar currentPhase={currentPhase} setCurrentPhase={setCurrentPhase} plan={plan} />
             <main className="flex-1 p-4 md:p-8 overflow-y-auto relative">
                 <div className="absolute top-4 right-4 flex gap-2 z-10">
                     <div className="relative">
@@ -218,7 +243,7 @@ const App: React.FC = () => {
                             <i className="fas fa-file-export mr-2"></i>Export
                         </button>
                         {isExportMenuOpen && (
-                             <div className="absolute right-0 mt-2 w-48 bg-gray-800 rounded-md shadow-lg py-1">
+                             <div className="absolute right-0 mt-2 w-48 bg-gray-800 rounded-md shadow-lg py-1 border border-gray-700">
                                 <a onClick={handleExportPDF} className="block px-4 py-2 text-sm text-gray-300 hover:bg-indigo-600 hover:text-white cursor-pointer">Export as PDF</a>
                                 <a onClick={handleExportWord} className="block px-4 py-2 text-sm text-gray-300 hover:bg-indigo-600 hover:text-white cursor-pointer">Export as Word</a>
                             </div>
@@ -299,8 +324,8 @@ const App: React.FC = () => {
                                         {generatedIdeas.map((idea, index) => (
                                             <li key={index}
                                                 onClick={() => handleStartNewApp(idea)}
-                                                className="bg-gray-700 p-3 rounded-md hover:bg-indigo-500 hover:text-white cursor-pointer transition">
-                                                {idea}
+                                                className="bg-gray-700 p-3 rounded-md hover:bg-indigo-500 hover:text-white cursor-pointer transition flex gap-2">
+                                                <span className="font-bold text-indigo-400">{index + 1}.</span> {idea}
                                             </li>
                                         ))}
                                     </ul>
@@ -309,7 +334,15 @@ const App: React.FC = () => {
                         </div>
                     </div>
                 ) : (
-                    <Canvas plan={plan} updatePlan={updatePlan} setCurrentPhase={setCurrentPhase} loading={loading} setLoading={setLoading}/>
+                    <Canvas 
+                        plan={plan} 
+                        updatePlan={updatePlan} 
+                        setCurrentPhase={setCurrentPhase} 
+                        loading={loading} 
+                        setLoading={setLoading}
+                        userProfile={userProfile}
+                        setUserProfile={setUserProfile}
+                    />
                 )}
             </main>
         </div>

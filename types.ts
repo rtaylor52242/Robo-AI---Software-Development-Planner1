@@ -10,11 +10,20 @@ export interface AppPlan {
     idea: string;
     ideaImprovements: string[];
     marketValidation: MarketValidation | null;
-    persona: Persona | null;
+    personas: Persona[];
     pricing: PricingTier[];
     techStack: TechStack | null;
     mvpPlan: MvpStep[];
     features: Feature[];
+}
+
+export interface UserProfile {
+    name: string;
+    phone: string;
+    address: string;
+    bio: string;
+    website: string;
+    techPreferences: string[];
 }
 
 export interface MarketValidation {
